@@ -27,7 +27,7 @@ date_sltn = st.sidebar.slider(
 
 # Header
 st.subheader("Welcome to IT5006 Project")
-st.title("HDB Data Analysis")
+st.title("HDB Data - Exploratory Data Analysis")
 
 # Loading the selected dataset to dataframe based on filters
 if rental_resale_sltn == 'Rental':
