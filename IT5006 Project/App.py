@@ -290,8 +290,6 @@ else:
   sg_map = make_choropleth(df, sg_geojson)
   st.plotly_chart(sg_map, use_container_width=False)
 
-  # Plot additional graphs if data type is 'Rental'
-  plot_additional_graphs(rental_resale_sltn, date_sltn[0], date_sltn[1])
 
 # Display dataset at bottom of page
 st.write('### Data')
