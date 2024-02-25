@@ -50,7 +50,7 @@ if rental_resale_sltn == 'Rental':
   median_price = df['monthly_rent'].median()
   min_price = df['monthly_rent'].min()
   max_price = df['monthly_rent'].max()
-else: 
+else:
   median_price = df['resale_price'].median()
   min_price = df['resale_price'].min()
   max_price = df['resale_price'].max()
@@ -268,9 +268,9 @@ if rental_resale_sltn == 'Resale':
       sg_geojson = json.load(f)
 
   # Data Loading and Processing with GeoJSON towns considered
-  df = load_and_preprocess_data(rental_resale_sltn, date_sltn[0], date_sltn[1], sg_geojson)
+  processed_df = load_and_preprocess_data(rental_resale_sltn, date_sltn[0], date_sltn[1], sg_geojson)
 
-  sg_map = make_choropleth(df, sg_geojson)
+  sg_map = make_choropleth(processed_df, sg_geojson)
   st.plotly_chart(sg_map, use_container_width=False)
 
   # Plot additional graphs if data type is 'Resale'
@@ -278,17 +278,48 @@ if rental_resale_sltn == 'Resale':
 
 # For rental data
 else:
-  st.title("HDB Price Dashboard For Rental Flats ")
-  # Load GeoJSON file
-  geojson_file = "map4.json"
-  with open(geojson_file) as f:
-      sg_geojson = json.load(f)
+    st.title("HDB Price Dashboard For Rental Flats ")
+    # Load GeoJSON file
+    geojson_file = "map4.json"
+    with open(geojson_file) as f:
+        sg_geojson = json.load(f)
 
-  # Data Loading and Processing with GeoJSON towns considered
-  df = load_and_preprocess_data(rental_resale_sltn, date_sltn[0], date_sltn[1], sg_geojson)
+    # Data Loading and Processing with GeoJSON towns considered
+    processed_df = load_and_preprocess_data(rental_resale_sltn, date_sltn[0], date_sltn[1], sg_geojson)
 
-  sg_map = make_choropleth(df, sg_geojson)
-  st.plotly_chart(sg_map, use_container_width=False)
+    sg_map = make_choropleth(processed_df, sg_geojson)
+    st.plotly_chart(sg_map, use_container_width=False)
+
+
+    # Median rental price by year, trend line showing how rental prices changed over the years
+    df_rental['year'] = df_rental['rent_approval_date'].dt.year
+    df_rental = df_rental[(df_rental['year'] >= date_sltn[0]) & (df_rental['year'] <= date_sltn[1])]
+    median_rental_by_year_flat_type = df_rental.groupby(['year', 'flat_type'])['monthly_rent'].median().reset_index()
+        # Create a line chart with Plotly Express
+    fig = px.line(median_rental_by_year_flat_type, x='year', y='monthly_rent', color='flat_type',
+                title='Median Rental Price by Year and Flat Type',
+                labels={'monthly_rent': 'Median Rental Price', 'year': 'Year'},
+                markers=True)
+        # Add a trend line for overall median rental price by year
+    overall_median_rental_by_year = df_rental.groupby('year')['monthly_rent'].median().reset_index()
+    fig.add_scatter(x=overall_median_rental_by_year['year'], y=overall_median_rental_by_year['monthly_rent'],
+                    mode='lines+markers', name='Overall Trend', line=dict(color='black', dash='dash'))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+    # Number of units rented by month Trend line showing the number of units rented over the months (i.e. whether there are peaks at certain months)
+    df_rental['month'] = df_rental['rent_approval_date'].dt.month
+    df_selected_year = df_rental[(df_rental['year'] >= date_sltn[0]) & (df_rental['year'] <= date_sltn[1])]
+    units_rented_by_month_flat_type = df_selected_year.groupby(['month', 'flat_type']).size().reset_index(name='count')
+    fig = px.line(units_rented_by_month_flat_type, x='month', y='count', color='flat_type',
+              title=f'Number of Units Rented by Month Between {date_sltn[0]} and {date_sltn[1]}',
+              labels={'count': 'Number of Units Rented', 'month': 'Month'},
+              markers=True)
+    overall_units_rented_by_month = df_selected_year.groupby('month')['rent_approval_date'].count().reset_index(name='count')
+    fig.add_scatter(x=overall_units_rented_by_month['month'], y=overall_units_rented_by_month['count'],
+                    mode='lines+markers', name='Overall Trend', line=dict(color='black', dash='dash'))
+    st.plotly_chart(fig, use_container_width=True)
+
 
 
 # Display dataset at bottom of page
