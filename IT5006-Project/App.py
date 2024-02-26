@@ -79,10 +79,10 @@ else:
 def load_and_preprocess_data(data_type, selected_year_start, selected_year_end, geojson_data, selected_town, selected_flat_type):
     # Load data based on the selected type
     if data_type == 'Resale':
-        data = pd.read_csv('./Cleaned_data/resale_data_cleaned.csv', parse_dates=['month'])
+        data = pd.read_csv('IT5006-Project/Cleaned_data/resale_data_cleaned.csv', parse_dates=['month'])
         data['year'] = data['month'].dt.year
     else:
-        data = pd.read_csv('./Cleaned_data/rental_cleaned.csv', parse_dates=['rent_approval_date'])
+        data = pd.read_csv('IT5006-Project/Cleaned_data/rental_cleaned.csv', parse_dates=['rent_approval_date'])
         data['year'] = data['rent_approval_date'].dt.year
         data['price_per_sqm'] = data['price_per_sqm']
 
