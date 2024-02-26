@@ -233,7 +233,6 @@ def plot_additional_graphs(data_type, selected_year_start, selected_year_end,  s
         plt.xlabel('Flat Type')
         st.pyplot(plt)
         plt.clf()  # Clear the figure after plotting
-        
         # Graph 2: Price per sqm over the selected year, aggregated by months (if needed)
         # Assuming you want to show variations within the selected year. 
         # This requires a different approach, considering your data spans multiple years.
