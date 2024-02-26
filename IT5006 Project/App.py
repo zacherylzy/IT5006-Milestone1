@@ -20,14 +20,24 @@ rental_resale_sltn = st.sidebar.radio(
 if rental_resale_sltn == 'Rental':
     min_sltn_value = pd.to_datetime(df_rental['rent_approval_date'].min()).year
     max_sltn_value = pd.to_datetime(df_rental['rent_approval_date'].max()).year
-else: 
+    # Extract unique values for town and flat type filters
+    unique_towns = sorted(df_rental['town'].unique())
+    unique_flat_types = sorted(df_rental['flat_type'].unique())
+else:
     min_sltn_value = pd.to_datetime(df_resale['month'].min()).year
     max_sltn_value = pd.to_datetime(df_resale['month'].max()).year
+    # Extract unique values for town and flat type filters
+    unique_towns = sorted(df_resale['town'].unique())
+    unique_flat_types = sorted(df_resale['flat_type'].unique())
 
 date_sltn = st.sidebar.slider(
     'Select date range',
     min_sltn_value, max_sltn_value, (min_sltn_value,max_sltn_value)
     )
+
+# Sidebar filters for town and flat type
+selected_town = st.sidebar.multiselect('Select Town(s)', unique_towns, default=unique_towns)
+selected_flat_type = st.sidebar.multiselect('Select Flat Type(s)', unique_flat_types, default=unique_flat_types)
 
 # Header
 st.subheader("Welcome to IT5006 Project")
@@ -37,9 +47,13 @@ st.title("HDB Data - Exploratory Data Analysis")
 if rental_resale_sltn == 'Rental':
   df = df_rental.iloc[:, 1:]     # Drop first column
   df = df[(df['rent_approval_date'].dt.year >= date_sltn[0]) & (df['rent_approval_date'].dt.year <= date_sltn[1])]
+  # Apply town and flat type filters
+  df = df[df['town'].isin(selected_town) & df['flat_type'].isin(selected_flat_type)]
 else:
   df = df_resale
   df = df[(df['month'].dt.year >= date_sltn[0]) & (df['month'].dt.year <= date_sltn[1])]
+  # Apply town and flat type filters
+  df = df[df['town'].isin(selected_town) & df['flat_type'].isin(selected_flat_type)]
 
 
 # Common visualisations
@@ -65,7 +79,7 @@ col4.metric("No of units", f'{no_units:,}')
 st.write('### Data Analysis')
 
 # Function to load and preprocess data based on user selection (For zach's visualisation)
-def load_and_preprocess_data(data_type, selected_year_start, selected_year_end, geojson_data):
+def load_and_preprocess_data(data_type, selected_year_start, selected_year_end, geojson_data, selected_town, selected_flat_type):
     # Load data based on the selected type
     if data_type == 'Resale':
         data = pd.read_csv('./Cleaned_data/resale_data_cleaned.csv', parse_dates=['month'])
@@ -79,6 +93,9 @@ def load_and_preprocess_data(data_type, selected_year_start, selected_year_end, 
 
     # Filter data for the selected year
     data = data[(data['year'] >= selected_year_start) & (data['year'] <= selected_year_end)]
+
+    # Apply town and flat type filters
+    data = data[data['town'].isin(selected_town) & data['flat_type'].isin(selected_flat_type)]
 
     # Extract town names from GeoJSON
     geojson_towns = [feature['properties']['name'] for feature in geojson_data['features']]
@@ -203,13 +220,11 @@ def map_value_to_color(value, min_value, max_value):
     # Map the normalized value to an index in the color scale
     color_index = int(normalized_value * (len(custom_color_scale) - 1))
     return custom_color_scale[color_index]
-def plot_additional_graphs(data_type, selected_year_start, selected_year_end):
+def plot_additional_graphs(data_type, selected_year_start, selected_year_end,  selected_town, selected_flat_type, data):
     if data_type == 'Resale':
-        data = pd.read_csv('./Cleaned_data/resale_data_cleaned.csv', parse_dates=['month'])
         data['year'] = data['month'].dt.year
         data['town'] = data['town'].str.upper()
-        data = data[(data['year'] >= selected_year_start) & (data['year'] <= selected_year_end)]
-        
+
         # Graph 1: Price per sqm against flat type
         plt.figure(figsize=(10, 6))
         data.groupby('flat_type')['price_per_sqm'].mean().plot(kind='bar', color='skyblue')
@@ -253,6 +268,39 @@ def plot_additional_graphs(data_type, selected_year_start, selected_year_end):
         plt.xlabel('Flat Type')
         st.pyplot(plt)
         plt.clf()  # Clear the figure after plotting
+    
+    # Plot For rental data
+    else:
+        data['town'] = data['town'].str.upper()
+        
+        # Median rental price by year, trend line showing how rental prices changed over the years
+        data['year'] = data['rent_approval_date'].dt.year
+        data = data[(data['year'] >= date_sltn[0]) & (data['year'] <= date_sltn[1])]
+        median_rental_by_year_flat_type = data.groupby(['year', 'flat_type'])['monthly_rent'].median().reset_index()
+            # Create a line chart with Plotly Express
+        fig = px.line(median_rental_by_year_flat_type, x='year', y='monthly_rent', color='flat_type',
+                    title='Median Rental Price by Year and Flat Type',
+                    labels={'monthly_rent': 'Median Rental Price', 'year': 'Year'},
+                    markers=True)
+            # Add a trend line for overall median rental price by year
+        overall_median_rental_by_year = data.groupby('year')['monthly_rent'].median().reset_index()
+        fig.add_scatter(x=overall_median_rental_by_year['year'], y=overall_median_rental_by_year['monthly_rent'],
+                        mode='lines+markers', name='Overall Trend', line=dict(color='black', dash='dash'))
+        st.plotly_chart(fig, use_container_width=True)
+
+
+        # Number of units rented by month Trend line showing the number of units rented over the months (i.e. whether there are peaks at certain months)
+        data['month'] = data['rent_approval_date'].dt.month
+        df_selected_year = data[(data['year'] >= date_sltn[0]) & (data['year'] <= date_sltn[1])]
+        units_rented_by_month_flat_type = df_selected_year.groupby(['month', 'flat_type']).size().reset_index(name='count')
+        fig = px.line(units_rented_by_month_flat_type, x='month', y='count', color='flat_type',
+                title=f'Number of Units Rented by Month Between {date_sltn[0]} and {date_sltn[1]}',
+                labels={'count': 'Number of Units Rented', 'month': 'Month'},
+                markers=True)
+        overall_units_rented_by_month = df_selected_year.groupby('month')['rent_approval_date'].count().reset_index(name='count')
+        fig.add_scatter(x=overall_units_rented_by_month['month'], y=overall_units_rented_by_month['count'],
+                        mode='lines+markers', name='Overall Trend', line=dict(color='black', dash='dash'))
+        st.plotly_chart(fig, use_container_width=True)
 
 ## TO DO: insert common visualisations here
 
@@ -268,13 +316,13 @@ if rental_resale_sltn == 'Resale':
       sg_geojson = json.load(f)
 
   # Data Loading and Processing with GeoJSON towns considered
-  processed_df = load_and_preprocess_data(rental_resale_sltn, date_sltn[0], date_sltn[1], sg_geojson)
+  processed_df = load_and_preprocess_data(rental_resale_sltn, date_sltn[0], date_sltn[1], sg_geojson, selected_town, selected_flat_type)
 
   sg_map = make_choropleth(processed_df, sg_geojson)
   st.plotly_chart(sg_map, use_container_width=False)
 
   # Plot additional graphs if data type is 'Resale'
-  plot_additional_graphs(rental_resale_sltn, date_sltn[0], date_sltn[1])
+  plot_additional_graphs(rental_resale_sltn, date_sltn[0], date_sltn[1], selected_town, selected_flat_type, df)
 
 # For rental data
 else:
@@ -285,41 +333,12 @@ else:
         sg_geojson = json.load(f)
 
     # Data Loading and Processing with GeoJSON towns considered
-    processed_df = load_and_preprocess_data(rental_resale_sltn, date_sltn[0], date_sltn[1], sg_geojson)
+    processed_df = load_and_preprocess_data(rental_resale_sltn, date_sltn[0], date_sltn[1], sg_geojson, selected_town, selected_flat_type)
 
     sg_map = make_choropleth(processed_df, sg_geojson)
     st.plotly_chart(sg_map, use_container_width=False)
-
-
-    # Median rental price by year, trend line showing how rental prices changed over the years
-    df_rental['year'] = df_rental['rent_approval_date'].dt.year
-    df_rental = df_rental[(df_rental['year'] >= date_sltn[0]) & (df_rental['year'] <= date_sltn[1])]
-    median_rental_by_year_flat_type = df_rental.groupby(['year', 'flat_type'])['monthly_rent'].median().reset_index()
-        # Create a line chart with Plotly Express
-    fig = px.line(median_rental_by_year_flat_type, x='year', y='monthly_rent', color='flat_type',
-                title='Median Rental Price by Year and Flat Type',
-                labels={'monthly_rent': 'Median Rental Price', 'year': 'Year'},
-                markers=True)
-        # Add a trend line for overall median rental price by year
-    overall_median_rental_by_year = df_rental.groupby('year')['monthly_rent'].median().reset_index()
-    fig.add_scatter(x=overall_median_rental_by_year['year'], y=overall_median_rental_by_year['monthly_rent'],
-                    mode='lines+markers', name='Overall Trend', line=dict(color='black', dash='dash'))
-    st.plotly_chart(fig, use_container_width=True)
-
-
-    # Number of units rented by month Trend line showing the number of units rented over the months (i.e. whether there are peaks at certain months)
-    df_rental['month'] = df_rental['rent_approval_date'].dt.month
-    df_selected_year = df_rental[(df_rental['year'] >= date_sltn[0]) & (df_rental['year'] <= date_sltn[1])]
-    units_rented_by_month_flat_type = df_selected_year.groupby(['month', 'flat_type']).size().reset_index(name='count')
-    fig = px.line(units_rented_by_month_flat_type, x='month', y='count', color='flat_type',
-              title=f'Number of Units Rented by Month Between {date_sltn[0]} and {date_sltn[1]}',
-              labels={'count': 'Number of Units Rented', 'month': 'Month'},
-              markers=True)
-    overall_units_rented_by_month = df_selected_year.groupby('month')['rent_approval_date'].count().reset_index(name='count')
-    fig.add_scatter(x=overall_units_rented_by_month['month'], y=overall_units_rented_by_month['count'],
-                    mode='lines+markers', name='Overall Trend', line=dict(color='black', dash='dash'))
-    st.plotly_chart(fig, use_container_width=True)
-
+    # Plot additional graphs if data type is 'Rental'
+    plot_additional_graphs(rental_resale_sltn, date_sltn[0], date_sltn[1], selected_town, selected_flat_type, df)
 
 
 # Display dataset at bottom of page
