@@ -482,7 +482,7 @@ if rental_resale_sltn == 'Resale':
   st.write('### _Data Analysis_')
 
   # Load GeoJSON file
-  geojson_file = "map4.json"
+  geojson_file = "IT5006-Project/map4.json"
   with open(geojson_file) as f:
       sg_geojson = json.load(f)
 
@@ -527,7 +527,7 @@ else:
     st.write('### _Data Analysis_')
     
     # Load GeoJSON file
-    geojson_file = "map4.json"
+    geojson_file = "IT5006-Project/map4.json"
     with open(geojson_file) as f:
         sg_geojson = json.load(f)
 
