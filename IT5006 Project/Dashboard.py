@@ -479,9 +479,7 @@ if rental_resale_sltn == 'Resale':
 
   col1, col2, col3 = st.columns(3)
   col1.metric("No of units", f'{no_units:,}')
-
-  
-    st.write('### _Data Analysis_')
+  st.write('### _Data Analysis_')
 
   # Load GeoJSON file
   geojson_file = "map4.json"
