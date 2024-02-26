@@ -1,0 +1,11 @@
+python-docx
+plotpy
+scikit-learn
+matplotlib
+pypdf
+pandas
+seaborn
+numpy
+plotly.express
+datetime
+geopandas
