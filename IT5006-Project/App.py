@@ -10,8 +10,8 @@ import calendar
 st.set_page_config(page_title="IT5006 Project", page_icon=":smiley:", layout="wide")
 
 # Load data
-df_rental = pd.read_csv('./Cleaned_data/rental_cleaned.csv', parse_dates=['rent_approval_date'])
-df_resale = pd.read_csv('./Cleaned_data/resale_data_cleaned.csv', parse_dates=['month'])
+df_rental = pd.read_csv('IT5006-Project/Cleaned_data/rental_cleaned.csv', parse_dates=['rent_approval_date'])
+df_resale = pd.read_csv('IT5006-Project/Cleaned_data/resale_data_cleaned.csv', parse_dates=['month'])
 df_resale['flat_type'] = df_resale['flat_type'].str.replace(' ', '-', regex=False) # making categories consistent
 
 # Sidebar + Filters
